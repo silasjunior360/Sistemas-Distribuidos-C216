@@ -1,4 +1,4 @@
-# Prática 1: Git/GitHub, Poetry e Makefile
+
 
 ## Como usar Poetry
 
@@ -69,7 +69,19 @@ Roda Black e isort nos arquivos de código
 make test
 ```
 
-Executa pytest
+Executa a suíte de testes do backend com Pytest.
+
+Também é possível executar diretamente com Poetry:
+
+```bash
+poetry run pytest tests -q
+```
+
+Os testes usam `TestClient`, portanto não é necessário iniciar o servidor da API
+separadamente.
+
+O GitHub Actions executa essa mesma suíte automaticamente em cada `push` e
+`pull_request`.
 
 ### Limpar artefatos
 
