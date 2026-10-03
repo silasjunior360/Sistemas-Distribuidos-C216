@@ -1,0 +1,57 @@
+name: Backend CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-and-format:
+    name: Ruff (Lint & Format)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: poetry
+          cache-dependency-path: poetry.lock
+
+      - name: Install dependencies
+        run: poetry install --with dev --no-root
+
+      - name: Check Formatting
+        run: poetry run ruff format --check backend tests
+
+      - name: Lint Code
+        run: poetry run ruff check backend tests
+
+  tests:
+    name: Pytest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Poetry
+        run: pipx install poetry
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: poetry
+          cache-dependency-path: poetry.lock
+
+      - name: Install dependencies
+        run: poetry install --with dev --no-root
+
+      - name: Run Tests
+        run: poetry run pytest tests -q

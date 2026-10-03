@@ -25,7 +25,7 @@ format:
 	$(POETRY) run ruff format backend tests
 
 test:
-	$(POETRY) run $(PYTEST)
+	$(POETRY) run pytest tests -q
 
 clean:
 	rm -rf dist build *.egg-info .pytest_cache .venv
