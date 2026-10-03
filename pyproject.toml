@@ -20,6 +20,9 @@ dev = [
     "ruff (>=0.16.3,<0.17.0)"
 ]
 
+[tool.ruff]
+# O código da aplicação fica em backend/ (imports "from app...")
+src = ["backend"]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
