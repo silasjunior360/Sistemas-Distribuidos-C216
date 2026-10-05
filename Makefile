@@ -1,7 +1,7 @@
 .PHONY: help install run lint format test test-unit test-integration clean
 
-POETRY := poetry
-PYTEST := python -m pytest -q
+# O projeto Python (pyproject.toml, poetry.lock e tests/) fica em backend/
+POETRY := poetry -P backend
 
 help:
 	@echo "Targets:"
@@ -21,19 +21,19 @@ run:
 	$(POETRY) run python -m uvicorn app.main:app --reload --app-dir backend
 
 lint:
-	$(POETRY) run ruff check backend tests
+	$(POETRY) run ruff check backend
 
 format:
-	$(POETRY) run ruff format backend tests
+	$(POETRY) run ruff format backend
 
 test:
-	$(POETRY) run pytest tests -q
+	cd backend && poetry run pytest tests -q
 
 test-unit:
-	$(POETRY) run pytest tests/unit -q
+	cd backend && poetry run pytest tests/unit -q
 
 test-integration:
-	$(POETRY) run pytest tests/integration -q
+	cd backend && poetry run pytest tests/integration -q
 
 clean:
-	rm -rf dist build *.egg-info .pytest_cache .venv
+	rm -rf dist build *.egg-info .pytest_cache backend/.pytest_cache backend/.venv

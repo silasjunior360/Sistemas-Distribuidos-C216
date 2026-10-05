@@ -5,7 +5,6 @@ description = "Backend para atividade 1 de Sistemas Distribuídos"
 authors = [
     {name = "silasjunior360",email = "silas36junior@gmail.com"}
 ]
-readme = "README.md"
 requires-python = ">=3.12"
 package-mode = false
 dependencies = [
@@ -21,8 +20,8 @@ dev = [
 ]
 
 [tool.ruff]
-# O código da aplicação fica em backend/ (imports "from app...")
-src = ["backend"]
+# O código da aplicação fica em app/ (imports "from app...")
+src = ["."]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
