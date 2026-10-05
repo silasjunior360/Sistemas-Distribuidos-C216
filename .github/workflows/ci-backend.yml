@@ -4,6 +4,11 @@ on:
   push:
   pull_request:
 
+# O projeto Python (pyproject.toml, poetry.lock e tests/) fica em backend/
+defaults:
+  run:
+    working-directory: backend
+
 jobs:
   lint-and-format:
     name: Ruff (Lint & Format)
@@ -21,16 +26,16 @@ jobs:
         with:
           python-version: '3.12'
           cache: poetry
-          cache-dependency-path: poetry.lock
+          cache-dependency-path: backend/poetry.lock
 
       - name: Install dependencies
         run: poetry install --with dev --no-root
 
       - name: Check Formatting
-        run: poetry run ruff format --check backend tests
+        run: poetry run ruff format --check .
 
       - name: Lint Code
-        run: poetry run ruff check backend tests
+        run: poetry run ruff check .
 
   tests:
     name: Pytest
@@ -48,10 +53,13 @@ jobs:
         with:
           python-version: '3.12'
           cache: poetry
-          cache-dependency-path: poetry.lock
+          cache-dependency-path: backend/poetry.lock
 
       - name: Install dependencies
         run: poetry install --with dev --no-root
 
-      - name: Run Tests
-        run: poetry run pytest tests -q
+      - name: Run Unit Tests
+        run: poetry run pytest tests/unit -q
+
+      - name: Run Integration Tests
+        run: poetry run pytest tests/integration -q
