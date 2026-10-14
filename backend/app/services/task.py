@@ -1,50 +1,38 @@
-from app.schemas.task import Task, TaskCreate, TaskPatch
-
-# Regras de negócio das tarefas. Por enquanto os dados ficam em memória
-# (a persistência com banco fica para as próximas práticas).
-_tasks: dict[int, Task] = {}
-_next_id = 1
+from app.models.task import Task
+from app.repositories.task import TaskRepository
+from app.schemas.task import TaskCreate, TaskPatch
 
 
-def reset() -> None:
-    global _next_id
-    _tasks.clear()
-    _next_id = 1
+# Regras de negócio das tarefas. Recebe schemas Pydantic e usa o repository
+# para persistir os dados no banco.
+class TaskService:
+    def __init__(self, repository: TaskRepository):
+        self.repository = repository
 
+    def list_tasks(self, completed: bool | None = None, limit: int = 10) -> list[Task]:
+        return self.repository.get_all(completed, limit)
 
-def list_tasks(completed: bool | None = None, limit: int = 10) -> list[Task]:
-    tasks = list(_tasks.values())
-    if completed is not None:
-        tasks = [task for task in tasks if task.completed == completed]
-    return tasks[:limit]
+    def get_task(self, task_id: int) -> Task | None:
+        return self.repository.get(task_id)
 
+    def create_task(self, data: TaskCreate) -> Task:
+        return self.repository.create(Task(**data.model_dump()))
 
-def get_task(task_id: int) -> Task | None:
-    return _tasks.get(task_id)
+    def replace_task(self, task_id: int, data: TaskCreate) -> Task | None:
+        task = self.repository.get(task_id)
+        if task is None:
+            return None
+        return self.repository.update(task, data.model_dump())
 
+    def patch_task(self, task_id: int, data: TaskPatch) -> Task | None:
+        task = self.repository.get(task_id)
+        if task is None:
+            return None
+        return self.repository.update(task, data.model_dump(exclude_unset=True))
 
-def create_task(data: TaskCreate) -> Task:
-    global _next_id
-    task = Task(id=_next_id, **data.model_dump())
-    _tasks[task.id] = task
-    _next_id += 1
-    return task
-
-
-def replace_task(task_id: int, data: TaskCreate) -> Task | None:
-    if task_id not in _tasks:
-        return None
-    _tasks[task_id] = Task(id=task_id, **data.model_dump())
-    return _tasks[task_id]
-
-
-def patch_task(task_id: int, data: TaskPatch) -> Task | None:
-    if task_id not in _tasks:
-        return None
-    changes = data.model_dump(exclude_unset=True)
-    _tasks[task_id] = _tasks[task_id].model_copy(update=changes)
-    return _tasks[task_id]
-
-
-def delete_task(task_id: int) -> bool:
-    return _tasks.pop(task_id, None) is not None
+    def delete_task(self, task_id: int) -> bool:
+        task = self.repository.get(task_id)
+        if task is None:
+            return False
+        self.repository.delete(task)
+        return True

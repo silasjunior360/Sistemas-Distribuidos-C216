@@ -1,25 +1,42 @@
-from fastapi import APIRouter, HTTPException, status
+from typing import Annotated
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.database.session import get_db
+from app.repositories.task import TaskRepository
 from app.schemas.task import Task, TaskCreate, TaskPatch
-from app.services import task as task_service
+from app.services.task import TaskService
 
 router = APIRouter(prefix="/api/v1/tasks", tags=["tasks"])
+
+
+# Monta o service com um repository ligado à sessão da requisição
+def get_task_service(db: Annotated[Session, Depends(get_db)]) -> TaskService:
+    return TaskService(TaskRepository(db))
+
+
+TaskServiceDep = Annotated[TaskService, Depends(get_task_service)]
 
 
 def _not_found() -> HTTPException:
     return HTTPException(status.HTTP_404_NOT_FOUND, detail="Tarefa não encontrada")
 
 
+# As rotas usam "def" (e não "async def") porque o acesso ao banco é síncrono:
+# o FastAPI as executa em uma thread separada, sem travar o event loop.
+
+
 # Método GET - Lista tarefas, com filtros via query parameters
 @router.get("", response_model=list[Task])
-async def list_tasks(completed: bool | None = None, limit: int = 10):
-    return task_service.list_tasks(completed, limit)
+def list_tasks(service: TaskServiceDep, completed: bool | None = None, limit: int = 10):
+    return service.list_tasks(completed, limit)
 
 
 # Método GET - Busca uma tarefa pelo path parameter
 @router.get("/{task_id}", response_model=Task)
-async def get_task(task_id: int):
-    task = task_service.get_task(task_id)
+def get_task(task_id: int, service: TaskServiceDep):
+    task = service.get_task(task_id)
     if task is None:
         raise _not_found()
     return task
@@ -27,14 +44,14 @@ async def get_task(task_id: int):
 
 # Método POST - Cria uma nova tarefa
 @router.post("", response_model=Task, status_code=status.HTTP_201_CREATED)
-async def create_task(data: TaskCreate):
-    return task_service.create_task(data)
+def create_task(data: TaskCreate, service: TaskServiceDep):
+    return service.create_task(data)
 
 
 # Método PUT - Substitui todos os campos de uma tarefa
 @router.put("/{task_id}", response_model=Task)
-async def replace_task(task_id: int, data: TaskCreate):
-    task = task_service.replace_task(task_id, data)
+def replace_task(task_id: int, data: TaskCreate, service: TaskServiceDep):
+    task = service.replace_task(task_id, data)
     if task is None:
         raise _not_found()
     return task
@@ -42,8 +59,8 @@ async def replace_task(task_id: int, data: TaskCreate):
 
 # Método PATCH - Atualiza só os campos enviados
 @router.patch("/{task_id}", response_model=Task)
-async def patch_task(task_id: int, data: TaskPatch):
-    task = task_service.patch_task(task_id, data)
+def patch_task(task_id: int, data: TaskPatch, service: TaskServiceDep):
+    task = service.patch_task(task_id, data)
     if task is None:
         raise _not_found()
     return task
@@ -51,6 +68,6 @@ async def patch_task(task_id: int, data: TaskPatch):
 
 # Método DELETE - Remove uma tarefa
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_task(task_id: int):
-    if not task_service.delete_task(task_id):
+def delete_task(task_id: int, service: TaskServiceDep):
+    if not service.delete_task(task_id):
         raise _not_found()

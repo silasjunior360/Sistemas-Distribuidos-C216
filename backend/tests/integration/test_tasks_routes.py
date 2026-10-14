@@ -1,17 +1,10 @@
 import pytest
 from fastapi import status
-from fastapi.testclient import TestClient
-
-from app.main import app
 
 BASE_URL = "/api/v1/tasks"
 
 
-@pytest.fixture
-def client():
-    return TestClient(app)
-
-
+# O fixture "client" (com banco de teste) fica em tests/conftest.py
 @pytest.fixture
 def created_task(client):
     return client.post(BASE_URL, json={"title": "Estudar FastAPI"}).json()
