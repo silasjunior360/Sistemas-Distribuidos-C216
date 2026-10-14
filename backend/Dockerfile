@@ -14,6 +14,8 @@ RUN pip install --no-cache-dir poetry==2.4.1 \
     && pip uninstall -y poetry
 
 COPY app ./app
+COPY alembic ./alembic
+COPY alembic.ini ./
 
 # Executa a aplicação sem privilégios de root
 RUN useradd --create-home --uid 1000 appuser
@@ -21,4 +23,5 @@ USER appuser
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Aplica as migrations pendentes antes de subir a API (banco sempre atualizado)
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]
