@@ -92,7 +92,7 @@ ps:
 shell:
 	docker compose exec api sh
 
-db-upgrade db-downgrade db-migration db-current db-history: export DATABASE_URL = $(HOST_DATABASE_URL)
+run db-upgrade db-downgrade db-migration db-current db-history: export DATABASE_URL = $(HOST_DATABASE_URL)
 
 db-upgrade:
 	$(ALEMBIC) upgrade head
