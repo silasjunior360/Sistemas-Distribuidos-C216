@@ -1,29 +1,56 @@
-# API de Tarefas — C216 L1 (Prática 4)
+# API de Tarefas — C216 L1 (Prática 5)
 
-API REST em FastAPI organizada em camadas para o recurso **Tarefas** (`/api/v1/tasks`).
+API REST em FastAPI organizada em camadas para o recurso **Tarefas** (`/api/v1/tasks`),
+com persistência no PostgreSQL via SQLAlchemy e migrations com Alembic.
 
 ## Estrutura
 
 ```
 backend/
 ├── app/
-│   ├── main.py              # Apenas cria o app e registra as rotas
-│   ├── api/routes/tasks.py  # Endpoints (recebem HTTP)
-│   ├── schemas/task.py      # Modelos Pydantic
-│   └── services/task.py     # Regras de negócio + dados em memória
+│   ├── main.py                  # Apenas cria o app e registra as rotas
+│   ├── api/routes/tasks.py      # Endpoints (recebem HTTP)
+│   ├── schemas/task.py          # Schemas Pydantic (entrada e saída da API)
+│   ├── services/task.py         # Regras de negócio
+│   ├── repositories/task.py     # Acesso aos dados (SQLAlchemy)
+│   ├── models/task.py           # Modelo ORM (tabela tasks)
+│   ├── database/
+│   │   ├── base.py              # Classe base dos modelos ORM
+│   │   └── session.py           # Engine, sessões e dependência get_db
+│   └── core/config.py           # Configuração (DATABASE_URL)
+├── alembic/
+│   ├── env.py                   # Usa a DATABASE_URL e os modelos da aplicação
+│   └── versions/                # Migrations versionadas
 ├── tests/
-│   ├── conftest.py          # Limpa os dados antes de cada teste
-│   ├── unit/                # Testam o service direto, sem HTTP
-│   └── integration/         # Testam os endpoints via TestClient
+│   ├── conftest.py              # Banco de teste e cliente HTTP
+│   ├── unit/                    # Testam o service
+│   └── integration/             # Testam os endpoints e a persistência
 ├── .dockerignore
-├── Dockerfile               # Como construir a imagem do backend
+├── alembic.ini
+├── Dockerfile                   # Como construir a imagem do backend
 ├── poetry.lock
 ├── pyproject.toml
 └── pytest.ini
-.env.example                 # Variáveis necessárias (copiar para .env)
-compose.yaml                 # Orquestra api + PostgreSQL
+.env.example                     # Variáveis necessárias (copiar para .env)
+compose.yaml                     # Orquestra api + PostgreSQL
 Makefile
 ```
+
+## Persistência
+
+Fluxo de uma requisição:
+
+```
+Route → Service → Repository → SQLAlchemy → PostgreSQL
+```
+
+- **Schemas Pydantic** (`schemas/`) definem como os dados entram e saem da API;
+- **Modelos ORM** (`models/`) definem como os dados são armazenados no banco;
+- o **repository** é a única camada que conhece o SQLAlchemy;
+- cada requisição recebe uma sessão do banco pela dependência `get_db`.
+
+A conexão vem da variável de ambiente `DATABASE_URL`. Dentro do Compose o host
+é o nome do serviço (`db`); fora dele (Alembic, `make run`) é `localhost`.
 
 ## Endpoints
 
@@ -46,9 +73,11 @@ O ambiente sobe dois serviços com Docker Compose:
   (contexto de build `./backend`), publicado em `http://localhost:8000`;
 - `db`: PostgreSQL 16, com os dados persistidos no volume `postgres_data`.
 
-A API acessa o banco pelo nome do serviço (`db`), não por `localhost`. Nesta
-etapa a API ainda guarda os dados em memória; o banco já fica pronto para a
-próxima prática.
+A API acessa o banco pelo nome do serviço (`db`), não por `localhost`. Ao
+iniciar, o container da API executa `alembic upgrade head`, então o banco é
+criado/atualizado automaticamente a partir das migrations. A porta do banco
+também é publicada na máquina (`POSTGRES_PORT`, padrão `5432`) para rodar as
+migrations fora do container.
 
 ### Pré-requisitos
 
@@ -84,6 +113,43 @@ make down       # para e remove os containers (o volume do banco é mantido)
 
 Para apagar também os dados do banco: `docker compose down -v`
 
+### Validar a persistência
+
+1. `make up-build`
+2. Criar uma tarefa: `POST /api/v1/tasks` com `{"title": "Notebook"}`
+3. Listar: `GET /api/v1/tasks`
+4. Reiniciar a API: `docker compose restart api`
+5. Listar de novo: a tarefa continua lá
+
+Também dá para consultar o banco direto:
+
+```bash
+make db-shell          # abre o psql no container do banco
+SELECT * FROM tasks;
+```
+
+## Migrations (Alembic)
+
+Os comandos rodam na máquina e acessam o banco publicado em `localhost`, com as
+credenciais do `.env`. O serviço `db` precisa estar rodando (`make up` ou
+`docker compose up -d db`).
+
+```bash
+make db-upgrade                          # aplica todas as migrations
+make db-migration msg="add due date"     # gera migration a partir dos modelos
+make db-current                          # revisão atual do banco
+make db-history                          # histórico de migrations
+make db-downgrade                        # desfaz a última migration
+```
+
+Fluxo para alterar o banco:
+
+```
+Alterar o modelo → make db-migration → revisar o arquivo gerado → make db-upgrade
+```
+
+Sempre revise a migration gerada em `backend/alembic/versions/` antes de aplicar.
+
 ## Como usar Poetry
 
 O projeto Python fica em `backend/`, então os comandos abaixo são executados
@@ -101,11 +167,15 @@ poetry install --with dev --no-root
 
 ### Executar a aplicação
 
+Com o banco rodando e as migrations aplicadas:
+
 ```bash
 poetry run uvicorn app.main:app --reload
 ```
 
-A API estará disponível em `http://localhost:8000`
+A API estará disponível em `http://localhost:8000`. Sem `DATABASE_URL` definida,
+ela usa `postgresql+psycopg://app:change-me@localhost:5432/app` (os valores do
+`.env.example`).
 
 ### Entrar no ambiente virtual
 
@@ -145,7 +215,8 @@ Equivalente a `poetry install`
 make run
 ```
 
-Equivalente a `poetry run uvicorn app.main:app --reload --app-dir backend`
+Equivalente a `poetry run uvicorn app.main:app --reload --app-dir backend`,
+usando o banco publicado em `localhost` com as credenciais do `.env`
 
 ### Lint e formatação
 
@@ -177,10 +248,18 @@ poetry run pytest tests -q
 ```
 
 Os testes usam `TestClient`, portanto não é necessário iniciar o servidor da API
-separadamente.
+separadamente. Eles nunca usam o banco da aplicação: por padrão rodam em um
+SQLite em memória, recriando as tabelas a cada teste. Para rodar contra um
+PostgreSQL de teste, defina `TEST_DATABASE_URL`:
+
+```bash
+TEST_DATABASE_URL=postgresql+psycopg://app:change-me@localhost:5432/app_test make test
+```
 
 O GitHub Actions executa essa mesma suíte automaticamente em cada `push` e
-`pull_request`.
+`pull_request`, e também um job com PostgreSQL que aplica as migrations em um
+banco vazio, confere se elas batem com os modelos (`alembic check`) e roda os
+testes de integração no PostgreSQL.
 
 ### Limpar artefatos
 
