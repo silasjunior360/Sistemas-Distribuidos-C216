@@ -1,8 +1,15 @@
 .PHONY: help install run lint format test test-unit test-integration clean \
-	env up up-build down build logs logs-api ps shell
+	env up up-build down build logs logs-api ps shell 	db-upgrade db-downgrade db-migration db-current db-history db-shell
 
 # O projeto Python (pyproject.toml, poetry.lock e tests/) fica em backend/
 POETRY := poetry -P backend
+
+# Lê o .env (se existir) para montar a URL do banco vista da máquina:
+# fora do Compose o PostgreSQL é acessado por localhost, na porta publicada
+-include .env
+POSTGRES_PORT ?= 5432
+HOST_DATABASE_URL = postgresql+psycopg://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_PORT)/$(POSTGRES_DB)
+ALEMBIC := cd backend && poetry run alembic
 
 help:
 	@echo "Targets:"
@@ -25,6 +32,14 @@ help:
 	@echo "  logs-api  Follow logs of the api service"
 	@echo "  ps        List the running services"
 	@echo "  shell     Open a shell inside the api container"
+	@echo ""
+	@echo "Database (Alembic, com o db rodando):"
+	@echo "  db-upgrade              Apply all migrations (upgrade head)"
+	@echo "  db-downgrade            Revert the last migration"
+	@echo "  db-migration msg=\"...\"  Generate a migration from the models"
+	@echo "  db-current              Show the current revision of the database"
+	@echo "  db-history              Show the migration history"
+	@echo "  db-shell                Open psql inside the db container"
 
 install:
 	$(POETRY) install --with dev --no-root
@@ -76,3 +91,24 @@ ps:
 
 shell:
 	docker compose exec api sh
+
+db-upgrade db-downgrade db-migration db-current db-history: export DATABASE_URL = $(HOST_DATABASE_URL)
+
+db-upgrade:
+	$(ALEMBIC) upgrade head
+
+db-downgrade:
+	$(ALEMBIC) downgrade -1
+
+db-migration:
+	@test -n "$(msg)" || (echo 'Uso: make db-migration msg="descricao"' && exit 1)
+	$(ALEMBIC) revision --autogenerate -m "$(msg)"
+
+db-current:
+	$(ALEMBIC) current
+
+db-history:
+	$(ALEMBIC) history
+
+db-shell:
+	docker compose exec db psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
