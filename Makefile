@@ -1,5 +1,7 @@
 .PHONY: help install run lint format test test-unit test-integration clean \
-	env up up-build down build logs logs-api ps shell 	db-upgrade db-downgrade db-migration db-current db-history db-shell
+	env up up-build down build logs logs-api ps shell 	db-upgrade db-downgrade db-migration db-current db-history db-shell \
+	frontend-install frontend-dev frontend-lint frontend-format frontend-check \
+	frontend-test frontend-test-e2e frontend-build check-all
 
 # O projeto Python (pyproject.toml, poetry.lock e tests/) fica em backend/
 POETRY := poetry -P backend
@@ -112,3 +114,33 @@ db-history:
 
 db-shell:
 	docker compose exec db psql -U $(POSTGRES_USER) -d $(POSTGRES_DB)
+
+# Frontend (React + Vite), executado a partir da raiz
+NPM := npm --prefix frontend
+
+frontend-install:
+	$(NPM) ci
+
+frontend-dev:
+	$(NPM) run dev
+
+frontend-lint:
+	$(NPM) run lint
+
+frontend-format:
+	$(NPM) run format
+
+frontend-check:
+	$(NPM) run lint
+	$(NPM) run format:check
+
+frontend-test:
+	$(NPM) run test
+
+frontend-test-e2e:
+	$(NPM) run test:e2e
+
+frontend-build:
+	$(NPM) run build
+
+check-all: lint test frontend-check frontend-test frontend-build frontend-test-e2e
