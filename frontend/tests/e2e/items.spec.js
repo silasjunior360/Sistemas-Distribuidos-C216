@@ -1,12 +1,16 @@
 import { expect, test } from "@playwright/test";
 
+// Sem mocks: usa a API e o banco reais. Nome único para não depender de dados prévios
+function uniqueName(prefix) {
+  return `${prefix} ${Date.now()}`;
+}
+
 test("carrega a interface", async ({ page }) => {
   await page.goto("/");
 
   await expect(
     page.getByRole("heading", { name: "Gerenciador de Itens" }),
   ).toBeVisible();
-  await expect(page.getByText("Nenhum item cadastrado.")).toBeVisible();
 });
 
 test("mostra erro ao enviar nome vazio", async ({ page }) => {
@@ -17,13 +21,17 @@ test("mostra erro ao enviar nome vazio", async ({ page }) => {
   await expect(page.getByRole("alert")).toHaveText("O nome é obrigatório.");
 });
 
-test("cadastra um item e o exibe na listagem", async ({ page }) => {
+test("cadastra um item e ele persiste após recarregar a página", async ({
+  page,
+}) => {
+  const name = uniqueName("Notebook");
   await page.goto("/");
-
-  await page.getByLabel("Nome").fill("Notebook");
-  await page.getByLabel("Descrição").fill("14 polegadas");
+  await page.getByLabel("Nome").fill(name);
   await page.getByRole("button", { name: "Adicionar" }).click();
 
-  await expect(page.getByRole("listitem")).toContainText("Notebook");
-  await expect(page.getByText("Nenhum item cadastrado.")).toBeHidden();
+  const item = page.getByRole("listitem").filter({ hasText: name });
+  await expect(item).toBeVisible();
+
+  await page.reload();
+  await expect(item).toBeVisible(); // veio do PostgreSQL
 });

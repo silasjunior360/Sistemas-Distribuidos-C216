@@ -1,7 +1,7 @@
 .PHONY: help install run lint format test test-unit test-integration clean \
 	env up up-build down build logs logs-api ps shell 	db-upgrade db-downgrade db-migration db-current db-history db-shell \
 	frontend-install frontend-dev frontend-lint frontend-format frontend-check \
-	frontend-test frontend-test-e2e frontend-build check-all
+	frontend-test frontend-test-e2e frontend-build e2e check-all
 
 # O projeto Python (pyproject.toml, poetry.lock e tests/) fica em backend/
 POETRY := poetry -P backend
@@ -143,4 +143,13 @@ frontend-test-e2e:
 frontend-build:
 	$(NPM) run build
 
-check-all: lint test frontend-check frontend-test frontend-build frontend-test-e2e
+# E2E em uma stack separada (lab-e2e, outras portas e banco próprio).
+# No final derruba tudo com down -v, mesmo se algum teste falhar.
+E2E_COMPOSE := API_PORT=8001 FRONTEND_PORT=5174 POSTGRES_PORT=5433 docker compose -p lab-e2e
+
+e2e: env
+	$(E2E_COMPOSE) up -d --build --wait && \
+	E2E_BASE_URL=http://localhost:5174 $(NPM) run test:e2e; \
+	status=$$?; $(E2E_COMPOSE) down -v; exit $$status
+
+check-all: lint test frontend-check frontend-test frontend-build e2e
