@@ -5,12 +5,14 @@ description = "Backend para atividade 1 de Sistemas Distribuídos"
 authors = [
     {name = "silasjunior360",email = "silas36junior@gmail.com"}
 ]
-readme = "README.md"
 requires-python = ">=3.12"
 package-mode = false
 dependencies = [
     "fastapi (>=0.141.1,<0.142.0)",
-    "uvicorn (>=0.52.3,<0.53.0)"
+    "uvicorn (>=0.52.3,<0.53.0)",
+    "sqlalchemy (>=2.1.4,<3.0.0)",
+    "psycopg[binary] (>=3.3.6,<4.0.0)",
+    "alembic (>=1.20.0,<2.0.0)"
 ]
 
 [dependency-groups]
@@ -20,6 +22,13 @@ dev = [
     "ruff (>=0.16.3,<0.17.0)"
 ]
 
+[tool.ruff]
+# O código da aplicação fica em app/ (imports "from app...")
+src = ["."]
+
+[tool.ruff.lint.isort]
+# A pasta alembic/ (migrations) tem o mesmo nome do pacote instalado
+known-third-party = ["alembic"]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
