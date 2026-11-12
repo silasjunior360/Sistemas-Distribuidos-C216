@@ -1,0 +1,2 @@
+# Sempre LF, inclusive no Windows (o Biome e o Ruff esperam LF)
+* text=auto eol=lf
