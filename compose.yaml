@@ -5,13 +5,37 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     environment:
       # A API acessa o banco pelo nome do serviço (db), não por localhost
       DATABASE_URL: ${DATABASE_URL}
+      # Endereço do frontend que pode chamar a API pelo navegador
+      CORS_ORIGINS: http://localhost:${FRONTEND_PORT:-5173}
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    environment:
+      # O React roda no navegador, por isso usa localhost e não http://api:8000
+      VITE_API_URL: http://localhost:${API_PORT:-8000}
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:5173"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   db:
     image: postgres:16
