@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.repositories.task import TaskRepository
 from app.schemas.task import Task, TaskCreate, TaskPatch
-from app.services.task import TaskService
+from app.services.task import TaskAlreadyExistsError, TaskService
 
 router = APIRouter(prefix="/api/v1/tasks", tags=["tasks"])
 
@@ -45,7 +45,12 @@ def get_task(task_id: int, service: TaskServiceDep):
 # Método POST - Cria uma nova tarefa
 @router.post("", response_model=Task, status_code=status.HTTP_201_CREATED)
 def create_task(data: TaskCreate, service: TaskServiceDep):
-    return service.create_task(data)
+    try:
+        return service.create_task(data)
+    except TaskAlreadyExistsError:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, detail="Já existe uma tarefa com esse título"
+        ) from None
 
 
 # Método PUT - Substitui todos os campos de uma tarefa

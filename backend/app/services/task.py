@@ -3,6 +3,11 @@ from app.repositories.task import TaskRepository
 from app.schemas.task import TaskCreate, TaskPatch
 
 
+# Erro de regra de negócio: a rota o converte em 409 Conflict
+class TaskAlreadyExistsError(Exception):
+    pass
+
+
 # Regras de negócio das tarefas. Recebe schemas Pydantic e usa o repository
 # para persistir os dados no banco.
 class TaskService:
@@ -16,6 +21,8 @@ class TaskService:
         return self.repository.get(task_id)
 
     def create_task(self, data: TaskCreate) -> Task:
+        if self.repository.get_by_title(data.title) is not None:
+            raise TaskAlreadyExistsError
         return self.repository.create(Task(**data.model_dump()))
 
     def replace_task(self, task_id: int, data: TaskCreate) -> Task | None:

@@ -20,6 +20,9 @@ class TaskRepository:
     def get(self, task_id: int) -> Task | None:
         return self.db.get(Task, task_id)
 
+    def get_by_title(self, title: str) -> Task | None:
+        return self.db.scalar(select(Task).where(Task.title == title))
+
     def create(self, task: Task) -> Task:
         self.db.add(task)
         self.db.commit()
