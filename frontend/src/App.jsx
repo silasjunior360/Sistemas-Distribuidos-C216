@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
+import { AppointmentForm } from "./components/AppointmentForm";
 import { DayAppointments } from "./components/DayAppointments";
 import { MonthCalendar } from "./components/MonthCalendar";
-import { deleteAppointment, listMonth } from "./services/appointments";
+import {
+  createAppointment,
+  deleteAppointment,
+  listMonth,
+  updateAppointment,
+} from "./services/appointments";
 import { shiftMonth, toISODate } from "./utils/calendar";
 
 const today = new Date();
@@ -16,6 +22,8 @@ export default function App() {
     toISODate(today.getFullYear(), today.getMonth() + 1, today.getDate()),
   );
   const [appointments, setAppointments] = useState([]);
+  // Compromisso aberto no formulário para edição (null = criando um novo)
+  const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
 
   // Busca os compromissos sempre que o mês visível muda
@@ -48,8 +56,27 @@ export default function App() {
       await deleteAppointment(id);
       // Tira da lista local: não precisa buscar o mês de novo
       setAppointments((current) => current.filter((a) => a.id !== id));
+      if (editing?.id === id) setEditing(null);
     } catch (err) {
       setError(err.message);
+    }
+  }
+
+  // Chamado pelo formulário. Se a API recusar (409, 422), o erro sobe
+  // para o formulário, que mostra a mensagem.
+  async function handleSave(data) {
+    const saved = editing
+      ? await updateAppointment(editing.id, data)
+      : await createAppointment(data);
+    setEditing(null);
+    setSelectedDate(saved.date);
+
+    // Mostra o mês do compromisso salvo, com a lista atualizada
+    const [savedYear, savedMonth] = saved.date.split("-").map(Number);
+    if (savedYear === year && savedMonth === month) {
+      setAppointments(await listMonth(year, month));
+    } else {
+      setVisibleMonth({ year: savedYear, month: savedMonth }); // o useEffect busca
     }
   }
 
@@ -57,7 +84,7 @@ export default function App() {
   const dayAppointments = appointments.filter((a) => a.date === selectedDate);
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl space-y-6 p-4 sm:p-6">
+    <main className="mx-auto min-h-screen max-w-5xl space-y-6 p-4 sm:p-6">
       <h1 className="text-3xl font-bold">Agenda de Compromissos</h1>
 
       {error && (
@@ -66,20 +93,36 @@ export default function App() {
         </p>
       )}
 
-      <MonthCalendar
-        year={year}
-        month={month}
-        appointments={appointments}
-        selectedDate={selectedDate}
-        onSelectDate={setSelectedDate}
-        onChangeMonth={changeMonth}
-      />
+      {/* Calendário à esquerda; dia e formulário à direita (empilha no celular) */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <MonthCalendar
+          year={year}
+          month={month}
+          appointments={appointments}
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          onChangeMonth={changeMonth}
+        />
 
-      <DayAppointments
-        date={selectedDate}
-        appointments={dayAppointments}
-        onDelete={handleDelete}
-      />
+        <div className="space-y-6">
+          <DayAppointments
+            date={selectedDate}
+            appointments={dayAppointments}
+            onEdit={setEditing}
+            onDelete={handleDelete}
+          />
+
+          {/* A key recria o formulário (zerando os campos) ao trocar de dia
+              ou de compromisso em edição */}
+          <AppointmentForm
+            key={editing ? `editar-${editing.id}` : `novo-${selectedDate}`}
+            appointment={editing}
+            defaultDate={selectedDate}
+            onSubmit={handleSave}
+            onCancel={() => setEditing(null)}
+          />
+        </div>
+      </div>
     </main>
   );
 }

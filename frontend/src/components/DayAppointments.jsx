@@ -1,7 +1,7 @@
 import { formatLongDate, formatTime } from "../utils/calendar";
 
 // Compromissos do dia escolhido, já em ordem de horário (a API ordena)
-export function DayAppointments({ date, appointments, onDelete }) {
+export function DayAppointments({ date, appointments, onEdit, onDelete }) {
   return (
     <section className="space-y-3">
       <h2 className="text-lg font-semibold first-letter:uppercase">
@@ -29,14 +29,24 @@ export function DayAppointments({ date, appointments, onDelete }) {
                   </p>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={() => onDelete(appointment.id)}
-                aria-label={`Excluir ${appointment.title}`}
-                className="text-sm text-red-600 hover:underline"
-              >
-                Excluir
-              </button>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => onEdit(appointment)}
+                  aria-label={`Editar ${appointment.title}`}
+                  className="text-sm text-blue-700 hover:underline"
+                >
+                  Editar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(appointment.id)}
+                  aria-label={`Excluir ${appointment.title}`}
+                  className="text-sm text-red-600 hover:underline"
+                >
+                  Excluir
+                </button>
+              </div>
             </li>
           ))}
         </ul>

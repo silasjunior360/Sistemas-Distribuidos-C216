@@ -47,19 +47,25 @@ it("avisa quando o dia não tem compromissos", () => {
   expect(screen.getByText("Nenhum compromisso neste dia.")).toBeInTheDocument();
 });
 
-it("pede para excluir o compromisso clicado", async () => {
+it("pede para editar ou excluir o compromisso clicado", async () => {
+  const onEdit = vi.fn();
   const onDelete = vi.fn();
   render(
     <DayAppointments
       date="2026-11-20"
       appointments={appointments}
+      onEdit={onEdit}
       onDelete={onDelete}
     />,
   );
 
   await userEvent.click(
+    screen.getByRole("button", { name: "Editar Dentista" }),
+  );
+  await userEvent.click(
     screen.getByRole("button", { name: "Excluir Reunião" }),
   );
 
+  expect(onEdit).toHaveBeenCalledWith(appointments[0]);
   expect(onDelete).toHaveBeenCalledWith(2);
 });
