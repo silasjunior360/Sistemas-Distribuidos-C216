@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatLongDate,
   formatTime,
   monthDays,
   shiftMonth,
@@ -39,6 +40,10 @@ describe("shiftMonth", () => {
 
 it("toISODate completa mês e dia com zero", () => {
   expect(toISODate(2026, 3, 5)).toBe("2026-03-05");
+});
+
+it("formatLongDate mostra o dia da semana sem voltar um dia", () => {
+  expect(formatLongDate("2026-11-20")).toBe("sexta-feira, 20 de novembro");
 });
 
 it("formatTime mostra só horas e minutos", () => {

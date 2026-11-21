@@ -25,6 +25,17 @@ export function toISODate(year, month, day) {
   return `${year}-${mm}-${dd}`;
 }
 
+// "2026-11-20" -> "sexta-feira, 20 de novembro"
+export function formatLongDate(isoDate) {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  // new Date("2026-11-20") seria meia-noite em UTC, que no Brasil ainda é dia 19
+  return new Date(year, month - 1, day).toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
+
 // A API devolve "14:00:00"; na tela mostramos só "14:00"
 export function formatTime(time) {
   return time.slice(0, 5);
