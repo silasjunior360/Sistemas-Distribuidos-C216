@@ -12,7 +12,7 @@ defaults:
     working-directory: backend
 
 jobs:
-  lint-and-format:
+  quality:
     name: Ruff (Lint & Format)
     runs-on: ubuntu-latest
 
@@ -39,8 +39,8 @@ jobs:
       - name: Lint Code
         run: poetry run ruff check .
 
-  tests:
-    name: Pytest
+  unit-tests:
+    name: Testes unitários (Pytest)
     runs-on: ubuntu-latest
 
     steps:
@@ -61,10 +61,10 @@ jobs:
         run: poetry install --with dev --no-root
 
       - name: Run Tests
-        run: poetry run pytest tests -q
+        run: poetry run pytest tests/unit -q
 
-  database:
-    name: PostgreSQL (Migrations & Integration)
+  postgres-integration:
+    name: PostgreSQL (Migrations e testes de integração)
     runs-on: ubuntu-latest
 
     # Banco de verdade para validar as migrations e a persistência

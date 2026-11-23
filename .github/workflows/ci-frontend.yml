@@ -7,8 +7,8 @@ on:
       - projeto-final
 
 jobs:
-  frontend:
-    name: Biome, Vitest, Build e Playwright
+  quality:
+    name: Lint e formatação (Biome)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -28,10 +28,46 @@ jobs:
         run: npm run lint
       - name: Format check (Biome)
         run: npm run format:check
+
+  test-build:
+    name: Testes (Vitest) e build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
       - name: Unit and integration tests (Vitest)
         run: npm run test
       - name: Build
         run: npm run build
+
+  e2e:
+    name: Testes ponta a ponta (Playwright)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
       - name: E2E tests (make e2e)
