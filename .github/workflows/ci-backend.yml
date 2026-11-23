@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
     branches:
-      - main
+      - projeto-final
 
 # O projeto Python (pyproject.toml, poetry.lock e tests/) fica em backend/
 defaults:
