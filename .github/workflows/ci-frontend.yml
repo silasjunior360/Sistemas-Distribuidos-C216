@@ -31,6 +31,7 @@ jobs:
 
   test-build:
     name: Testes (Vitest) e build
+    needs: quality
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -53,6 +54,7 @@ jobs:
 
   e2e:
     name: Testes ponta a ponta (Playwright)
+    needs: test-build
     runs-on: ubuntu-latest
     defaults:
       run:
