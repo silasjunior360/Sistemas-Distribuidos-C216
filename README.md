@@ -1,99 +1,93 @@
 # Agenda de Compromissos — Projeto Final C216 L1
 
-Aplicação full stack para agendar compromissos em um calendário mensal:
-o usuário escolhe um dia do mês e marca um horário.
+Aplicação full stack para marcar compromissos em um calendário mensal: o usuário
+escolhe um dia, vê os compromissos dele e pode criar, editar e excluir.
 
-> **Status:** em desenvolvimento. Por enquanto o projeto tem apenas a base
-> (backend, frontend, banco, Docker, testes e CI), sem as funcionalidades da agenda.
+**Vídeo de apresentação:** [LINK DO VÍDEO]
+
+## Funcionalidades e regras
+
+- Calendário do mês com navegação entre meses e marcação dos dias com compromisso
+- Lista dos compromissos do dia selecionado, em ordem de horário
+- Criar, editar e excluir compromissos (título, descrição, data, início e fim)
+- **Regras de negócio:**
+  - o término deve ser depois do início (validação do schema, `422`)
+  - dois compromissos não podem se sobrepor no mesmo dia (service, `409`);
+    horários encostados (14h–15h e 15h–16h) são permitidos
+- Os dados ficam no PostgreSQL e continuam após recarregar a página
 
 ## Tecnologias
 
-- **Backend:** Python 3.12, FastAPI, SQLAlchemy, Alembic, Poetry
-- **Banco de dados:** PostgreSQL 16
+- **Backend:** Python 3.12, FastAPI, SQLAlchemy, Alembic, PostgreSQL 16
 - **Frontend:** React, Vite, Tailwind CSS
-- **Qualidade:** Pytest, Ruff, Vitest, Testing Library, Playwright, Biome
-- **Infra:** Docker, Docker Compose, Makefile, GitHub Actions
+- **Testes e qualidade:** Pytest, Ruff, Vitest, Testing Library, Playwright, Biome
+- **Infra:** Docker Compose, Makefile, GitHub Actions
 
-## Estrutura
+## Arquitetura
 
 ```
-backend/
-├── app/
-│   ├── main.py              # Cria o app, configura o CORS e registra as rotas
-│   ├── routes/              # Endpoints (HTTP)
-│   ├── core/config.py       # Configurações lidas do ambiente
-│   ├── database/            # Base dos modelos ORM e sessão do banco (get_db)
-│   └── models/              # Modelos ORM (tabelas)
-├── alembic/versions/        # Migrations
-└── tests/                   # Pytest
-frontend/
-├── src/                     # Aplicação React
-└── tests/                   # Vitest (unit/integration) e Playwright (e2e)
-compose.yaml                 # frontend + api + db
-Makefile                     # Atalhos dos comandos do projeto
-.env.example                 # Variáveis de ambiente (copiar para .env)
+Frontend (React) → Rotas (HTTP) → Service (regras) → Repository (SQLAlchemy) → PostgreSQL
 ```
 
-## Pré-requisitos
-
-- Docker com o plugin Compose
-- Make
-- Para rodar fora do Docker: Python 3.12 + Poetry e Node.js 22
-
-## Variáveis de ambiente
-
-```bash
-cp .env.example .env
+```
+backend/app/
+├── routes/          # Endpoints e códigos HTTP
+├── services/        # Regra de conflito de horário
+├── repositories/    # Consultas ao banco
+├── schemas/         # Validação de entrada e saída (Pydantic)
+└── models/          # Tabela appointments (ORM)
+frontend/src/
+├── components/      # MonthCalendar, DayAppointments, AppointmentForm
+├── services/        # Chamadas à API
+└── utils/           # Contas do calendário
 ```
 
-| Variável | Uso |
-|---|---|
-| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Banco criado pelo container do PostgreSQL |
-| `DATABASE_URL` | Conexão da API com o banco (host `db` dentro do Compose) |
-| `POSTGRES_PORT` | Porta do banco publicada na máquina (usada pelo `make db-*`) |
+## API
 
-O `.env` não é versionado. O `make up` cria o arquivo a partir do `.env.example` se ele não existir.
+Base: `/api/v1/appointments`
+
+| Método | Rota | Descrição | Respostas |
+|---|---|---|---|
+| GET | `?year=2026&month=11` | Compromissos do mês | 200, 422 |
+| GET | `/{id}` | Um compromisso | 200, 404 |
+| POST | `/` | Cria | 201, 409, 422 |
+| PUT | `/{id}` | Substitui | 200, 404, 409, 422 |
+| DELETE | `/{id}` | Exclui | 204, 404 |
+
+Documentação interativa: http://localhost:8000/docs
 
 ## Como executar
 
+Pré-requisitos: Docker com Compose e Make.
+
 ```bash
-make up-build   # constrói as imagens e sobe frontend, api e db
+make up-build   # cria o .env, constrói as imagens e sobe db, api e frontend
 make ps         # os três serviços devem aparecer como healthy
 make down       # para os containers (os dados do banco são mantidos)
 ```
 
-Ao iniciar, a API aplica as migrations (`alembic upgrade head`) automaticamente.
+A API aplica as migrations automaticamente ao iniciar.
 
 | Serviço | Endereço |
 |---|---|
 | Frontend | http://localhost:5173 |
 | API | http://localhost:8000 |
-| Documentação da API | http://localhost:8000/docs |
 
-## Testes e qualidade
-
-```bash
-make install            # dependências do backend
-make frontend-install   # dependências do frontend
-make lint               # Ruff (backend)
-make test               # Pytest (backend)
-make frontend-check     # Biome: lint e formatação (frontend)
-make frontend-test      # Vitest (frontend)
-make e2e                # Playwright em uma stack Docker separada
-make check-all          # tudo acima + build do frontend
-```
-
-O GitHub Actions executa o lint e os testes do backend e do frontend em todo pull request
-(e a cada push na `main`).
-
-## Migrations
-
-Com o banco rodando:
+## Testes
 
 ```bash
-make db-upgrade                       # aplica as migrations
-make db-migration msg="descricao"     # gera uma migration a partir dos modelos
-make db-current                       # revisão atual do banco
+make install && make frontend-install   # dependências (Python 3.12 + Poetry, Node 22)
+make lint && make test                  # Ruff e Pytest (unitários e integração)
+make frontend-check && make frontend-test   # Biome e Vitest
+make e2e                                # Playwright em uma stack Docker separada
 ```
 
-Use `make help` para ver todos os comandos.
+- **Backend:** unitários (schemas e regra de conflito) e integração (repository e
+  endpoints com banco real)
+- **Frontend:** unitários (componentes e funções) e integração (App com a API simulada)
+- **E2E:** navegador real contra a stack completa: criar e recarregar, conflito,
+  validação e edição
+
+O GitHub Actions roda lint, migrations, testes e E2E em todo pull request.
+
+`make help` lista todos os comandos.
