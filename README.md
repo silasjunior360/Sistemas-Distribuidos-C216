@@ -3,8 +3,7 @@
 Aplicação full stack para marcar compromissos em um calendário mensal: o usuário
 escolhe um dia, vê os compromissos dele e pode criar, editar e excluir.
 
-**Vídeo de apresentação:** https://youtu.be/XPNb8-JKIq0
-
+**Vídeo de apresentação:** https://youtu.be/kOez9vrTUW4
 ## Funcionalidades e regras
 
 - Calendário do mês com navegação entre meses e marcação dos dias com compromisso
